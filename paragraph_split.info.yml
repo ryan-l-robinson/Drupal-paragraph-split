@@ -1,0 +1,7 @@
+name: "Paragraph Split"
+description: "Helps with dividing from a text field into separate paragraphs."
+package: Migration
+type: module
+core_version_requirement: ^9
+dependencies:
+  - paragraphs:paragraphs

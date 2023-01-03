@@ -1,0 +1,46 @@
+<?php
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\paragraphs\Entity\Paragraph;
+use Drupal\user\Entity\User;
+use Drupal\node\Entity\Node;
+
+/** 
+ * Implements hook_ENTITY_TYPE_insert() for 'nodes'
+ * When a node is created, with content in the temporary field, create the associated paragraph instead
+ */
+function paragraph_split_node_insert(EntityInterface $node) {
+    //If node content type is node_type
+    if ($node->getType() == 'node_type') {
+        if (!$node->get('field_title')->isEmpty) {
+            $new_paragraphs = array();
+
+            $count = count($node->get('field_title'));
+            for ($k = 0; $k < $count; $k++) {
+
+                //This is needed to handle when there is a title without a matching description
+                $desc = (empty($node->get('field_description')[$k])) ? '' : $node->get('field_description')[$k]->getString();
+
+                //Create new paragraph entity
+                $paragraph = Paragraph::create([
+                    'type' => 'paragraph_type',
+                    'field_title' => $node->get('field_title')[$k],
+                    'field_description' => $desc,
+                    'uid' => 1,
+                ]);
+                $paragraph->save();
+
+                //Add the new paragraph to the array
+                array_push($new_paragraphs,array(
+                    'target_id' => $paragraph->id(),
+                    'target_revision_id' => $paragraph->getRevisionId(),
+                ));
+            }
+
+            //Overrides if there was already one in place, which there shouldn't be in this context of an import
+            $node->field_paragraph_reference = $new_paragraphs;
+        }
+
+        $node->save();
+    }
+}
